@@ -1,0 +1,83 @@
+# a) Import libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+
+# b) Read the data
+df = pd.read_csv("diabetes-1.csv")
+
+# c) Shape and info
+print("Shape of data:", df.shape)
+print("\nInfo:")
+df.info()
+
+# d) Replace 0s in BloodPressure, SkinThickness, BMI with mean (excluding 0s)
+for col in ["BloodPressure", "SkinThickness", "BMI"]:
+    mean_val = df[df[col] != 0][col].mean()
+    df[col] = df[col].replace(0, mean_val)
+
+# e) Read data again
+print("\nHead after imputing:")
+print(df.head())
+
+# f) Statistical info
+print("\nStatistical Description:")
+print(df.describe())
+
+# g) Drop the Outcome column
+df_cluster = df.drop("Outcome", axis=1)
+
+# h) Read data again
+print("\nData without 'Outcome' column:")
+print(df_cluster.head())
+
+# i) Scale using MinMaxScaler
+scaler = MinMaxScaler()
+scaled_data = scaler.fit_transform(df_cluster)
+df_scaled = pd.DataFrame(scaled_data, columns=df_cluster.columns)
+
+# j) Read scaled data
+print("\nScaled Data Preview:")
+print(df_scaled.head())
+
+# i again) Elbow method to find optimal clusters
+inertia = []
+K_range = range(1, 11)
+
+for k in K_range:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans.fit(df_scaled)
+    inertia.append(kmeans.inertia_)
+
+plt.figure(figsize=(8, 5))
+plt.plot(K_range, inertia, marker='o')
+plt.title("Elbow Method")
+plt.xlabel("Number of Clusters")
+plt.ylabel("Inertia")
+plt.grid(True)
+plt.show()
+
+# k) Create clusters
+k_optimal = 3
+kmeans = KMeans(n_clusters=k_optimal, random_state=42, n_init=10)
+labels = kmeans.fit_predict(df_scaled)
+
+print("\nInertia:", kmeans.inertia_)
+print("Cluster label counts:")
+print(pd.Series(labels).value_counts())
+
+# l) Evaluate clustering
+sil_score = silhouette_score(df_scaled, labels)
+calinski_score = calinski_harabasz_score(df_scaled, labels)
+davies_score = davies_bouldin_score(df_scaled, labels)
+
+print("\nSilhouette Score:", sil_score)
+print("Calinski-Harabasz Score:", calinski_score)
+print("Davies-Bouldin Score:", davies_score)
+
+# m) Optimal clusters explanation
+print("\nOptimal number of clusters is 3 based on the Elbow method.")
+print("This is supported by evaluation metrics showing reasonable separation between clusters.")
